@@ -41,6 +41,16 @@ const upload = multer({
     cb(null, true);
   },
 });
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/images/')
+  },
+  filename: function (req, file, cb) {
+    const id = req.body.id;
+    cb(null, `${id}${path.extname(file.originalname)}`)
+  }
+});
+const upload_image = multer({ storage: storage });
 
 /* ===========================
        Utility Functions
@@ -69,7 +79,7 @@ const hasStudentSubmitted = (rollNumber) => {
 =========================== */
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 100,
   message: "Too many login attempts. Please try again later.",
 });
 
@@ -104,7 +114,16 @@ app.get("/download/student-template.xlsx", (req, res) => {
     if (err) console.error("Download failed:", err);
   });
 });
-
+app.post('/image-upload', upload_image.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
+  
+  res.json({ 
+    message: 'File uploaded successfully',
+    path: `/images/${req.file.filename}`
+  });
+});
 // Route for downloading Student Template
 app.get("/download/student-template.xlsx", (req, res) => {
   res.download(studentTemplatePath, "student_template.xlsx", (err) => {

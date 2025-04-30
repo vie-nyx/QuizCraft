@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import "./upload.css";
+import ImageUploader from "./ImageUpload";
 
 const socket = io("http://localhost:3002");
+
 
 export const UploadExcel = () => {
   const [file, setFile] = useState(null);
@@ -182,6 +184,7 @@ export const UploadExcel = () => {
           {loadingQuestions ? "Uploading..." : "Upload Questions"}
         </button>
         <p className="feedback-message">{message}</p>
+        < ImageUploader/>
       </section>
 
       {/* Upload Student List */}
