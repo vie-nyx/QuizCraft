@@ -4,11 +4,10 @@ import Result from "./Result";
 import "./exam.css";
 
 export const ExamInterface = () => {
-  const [student, setStudent] = useState(null); // Initialize state
-
+  // State declarations
+  const [student, setStudent] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [testSchedule, setTestSchedule] = useState(null);
-
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -18,13 +17,73 @@ export const ExamInterface = () => {
   const [submitted, setSubmitted] = useState(false);
   const [timer, setTimer] = useState(0);
   const [suspiciousActivity, setSuspiciousActivity] = useState(false);
-  const [exitCount, setExitCount] = useState(0); // Track full-screen exits
-  const navigate = useNavigate();
+  const [exitCount, setExitCount] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [scoreData, setScoreData] = useState(null);
-  const timerRef = useRef(null);
   const [markedForReview, setMarkedForReview] = useState([]);
-  // Function to enter full-screen mode
+  // const [imagesExist, setImagesExist] = useState({});
+
+  const navigate = useNavigate();
+  const timerRef = useRef(null);
+  const suspiciousActivityRef = useRef(false);
+
+  // Filter questions based on selected subject
+  const filteredQuestions = questions?.filter?.(
+    (q) => q?.subject?.toLowerCase() === selectedSubject?.toLowerCase()
+  ) || [];
+
+  // Function to check if image exists
+  const checkImageExists = async (id) => {
+    try {
+      // Check for PNG first
+      const pngResponse = await fetch(`/images/${id}.png`, { method: 'HEAD' });
+      if (pngResponse.ok) return true;
+      
+      // If PNG doesn't exist, check for JPG
+      const jpgResponse = await fetch(`/images/${id}.jpg`, { method: 'HEAD' });
+      return jpgResponse.ok;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // Effect to check image existence when questions change
+  useEffect(() => {
+    const checkAllImages = async () => {
+      const existenceMap = {};
+      for (const question of questions) {
+        existenceMap[question.id] = await checkImageExists(question.id);
+      }
+      setImagesExist(existenceMap);
+    };
+
+    if (questions.length > 0) {
+      checkAllImages();
+    }
+  }, [questions]);
+
+  // Image rendering function
+  const renderQuestionImage = () => {
+    const questionId = filteredQuestions[currentQuestionIndex]?.id;
+    // if (!questionId || !imagesExist[questionId]) return null;
+
+    return (
+      <div className="question-image-container">
+        <img
+          src={`/images/${questionId}.png`}
+          
+          className="question-image"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = `/images/${questionId}.jpg`;
+          }}
+          
+        />
+      </div>
+    );
+  };
+
+  // Fullscreen handling
   const enterFullScreen = () => {
     if (document.documentElement.requestFullscreen) {
       document.documentElement
@@ -33,38 +92,26 @@ export const ExamInterface = () => {
     }
   };
 
-  useEffect(() => {
-    enterFullScreen(); // Enter full-screen on mount
-  }, []);
-  const suspiciousActivityRef = useRef(false);
-  // Function to check full-screen status
   const handleFullscreenChange = () => {
     if (!document.fullscreenElement && !submitted) {
-      // Check if the exam is not submitted
-      setExitCount((prev) => prev + 1); // Track exits
+      setExitCount((prev) => prev + 1);
       setSuspiciousActivity(true);
       alert(
         "Warning: You exited full-screen mode. Your attempt is marked as suspicious."
       );
 
-      // Optionally force submit after multiple exits
       if (exitCount >= 2) {
         alert(
           "Multiple full-screen exits detected. Your exam is being auto-submitted."
         );
         handleSubmit();
       } else {
-        enterFullScreen(); // Re-enter full-screen
+        enterFullScreen();
       }
     }
   };
 
-  useEffect(() => {
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () =>
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, [exitCount, submitted]);
-
+  // Data fetching effects
   useEffect(() => {
     const storedStudent = sessionStorage.getItem("student");
     if (storedStudent) {
@@ -88,17 +135,7 @@ export const ExamInterface = () => {
     };
     fetchSchedule();
   }, []);
-  const handleMarkForReview = () => {
-    const currentQuestionId = filteredQuestions[currentQuestionIndex].id;
-    setMarkedForReview((prev) =>
-      prev.includes(currentQuestionId)
-        ? prev.filter((id) => id !== currentQuestionId) // Unmark if already marked
-        : [...prev, currentQuestionId] // Mark for review
-    );
-    setCurrentQuestionIndex((prev) =>
-      Math.min(filteredQuestions.length - 1, prev + 1)
-    );
-  };
+
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
@@ -120,6 +157,7 @@ export const ExamInterface = () => {
     fetchQuestions();
   }, []);
 
+  // Timer and exam control
   useEffect(() => {
     if (!student || !testSchedule) return;
 
@@ -145,7 +183,6 @@ export const ExamInterface = () => {
       setTimer((prev) => {
         const currentTime = new Date();
         const newRemaining = Math.floor((end - currentTime) / 1000);
-
         if (newRemaining <= 0) {
           clearInterval(timerRef.current);
           handleSubmit();
@@ -157,6 +194,12 @@ export const ExamInterface = () => {
 
     return () => clearInterval(timerRef.current);
   }, [student, testSchedule, navigate]);
+
+  useEffect(() => {
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [exitCount, submitted]);
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {
@@ -171,25 +214,43 @@ export const ExamInterface = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [submitted]);
 
-  // const filteredQuestions = questions.filter((q) => q.subject.toLowerCase() === selectedSubject.toLowerCase());
+  useEffect(() => {
+    enterFullScreen();
+  }, []);
+
+  useEffect(() => {
+    suspiciousActivityRef.current = suspiciousActivity;
+  }, [suspiciousActivity]);
 
   const handleOptionChange = (option) => {
+    if (!filteredQuestions[currentQuestionIndex]?.id) return;
+
     const key = filteredQuestions[currentQuestionIndex].id;
-  
-    setSelectedOption((prev) => ({
-      ...prev,
-      [key]: option,
-    }));
-  
+    setSelectedOption((prev) => ({ ...prev, [key]: option }));
+
     if (!attempted.includes(key)) {
       setAttempted([...attempted, key]);
     }
-  
-    // Remove the question from the markedForReview list if it was marked
+
     if (markedForReview.includes(key)) {
       setMarkedForReview((prev) => prev.filter((id) => id !== key));
     }
   };
+
+  const handleMarkForReview = () => {
+    if (!filteredQuestions[currentQuestionIndex]?.id) return;
+
+    const currentQuestionId = filteredQuestions[currentQuestionIndex].id;
+    setMarkedForReview((prev) =>
+      prev.includes(currentQuestionId)
+        ? prev.filter((id) => id !== currentQuestionId)
+        : [...prev, currentQuestionId]
+    );
+    setCurrentQuestionIndex((prev) =>
+      Math.min(filteredQuestions.length - 1, prev + 1)
+    );
+  };
+
   const handleSubmit = useCallback(async () => {
     if (submitted || !student) return;
 
@@ -210,7 +271,7 @@ export const ExamInterface = () => {
         totalScore += marks;
         correctAnswers[key] = true;
       }
-      // Section breakdown
+
       if (!sectionDetails[question.subject]) {
         sectionDetails[question.subject] = {
           attempted: 0,
@@ -224,30 +285,27 @@ export const ExamInterface = () => {
         if (isCorrect) sectionDetails[question.subject].correct++;
       }
     });
-    setScore(totalScore);
 
-    // Prepare result data
+    setScore(totalScore);
     const totalPossible = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
-    const sections = Object.entries(sectionDetails).map(([name, data]) => ({
-      name,
-      ...data,
-    }));
+
     setScoreData({
       examName: "Final Examination",
       totalScore: Math.round((totalScore / totalPossible) * 100),
       correctAnswers: Object.keys(correctAnswers).length,
       totalQuestions: questions.length,
-      sections,
-      percentile: 75, // Should come from server
+      sections: Object.entries(sectionDetails).map(([name, data]) => ({
+        name,
+        ...data,
+      })),
+      percentile: 75,
     });
     setShowResult(true);
 
-    // Submit to backend
     try {
       await fetch("http://localhost:3002/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-
         body: JSON.stringify({
           studentName: student.Name,
           rollNumber: student["Roll Number"],
@@ -262,16 +320,9 @@ export const ExamInterface = () => {
     }
   }, [submitted, student, questions, selectedOption]);
 
-  useEffect(() => {
-    suspiciousActivityRef.current = suspiciousActivity;
-  }, [suspiciousActivity]);
   const handleReviewAnswers = () => {
-    // Implement review functionality
     console.log("Reviewing answers...");
   };
-  const filteredQuestions = questions.filter(
-    (q) => q.subject.toLowerCase() === selectedSubject.toLowerCase()
-  );
 
   const formatTime = (seconds) => {
     const hrs = Math.floor(seconds / 3600);
@@ -309,6 +360,7 @@ export const ExamInterface = () => {
                 ))}
               </div>
             </div>
+
             {filteredQuestions[currentQuestionIndex] && (
               <div className="question-box">
                 <h2>
@@ -321,6 +373,8 @@ export const ExamInterface = () => {
 
                 <div className="question-content">
                   <p>{filteredQuestions[currentQuestionIndex].question}</p>
+                  
+                  { checkImageExists(currentQuestionIndex) && renderQuestionImage()}
 
                   {filteredQuestions[currentQuestionIndex].options?.map(
                     (option, index) => (
@@ -341,38 +395,46 @@ export const ExamInterface = () => {
                   )}
                 </div>
 
-                <button
-                  className="prevbtn"
-                  onClick={() =>
-                    setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))
-                  }
-                  disabled={currentQuestionIndex === 0}
-                >
-                  Previous
-                </button>
-                <button
+                <div className="question-navigation">
+                  <button
+                    className="prevbtn"
+                    onClick={() =>
+                      setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))
+                    }
+                    disabled={
+                      currentQuestionIndex === 0 || !filteredQuestions.length
+                    }
+                  >
+                    Previous
+                  </button>
+                  <button
                     className="mark-review-btn"
                     onClick={handleMarkForReview}
-                    disabled={currentQuestionIndex >= filteredQuestions.length - 1}
+                    disabled={
+                      currentQuestionIndex >= filteredQuestions.length - 1
+                    }
                   >
                     Mark as Review & Next
                   </button>
-                <button
-                  className="nextbtn"
-                  onClick={() =>
-                    setCurrentQuestionIndex((prev) =>
-                      Math.min(filteredQuestions.length - 1, prev + 1)
-                    )
-                  }
-                  disabled={
-                    currentQuestionIndex >= filteredQuestions.length - 1
-                  }
-                >
-                  Save & Next
-                </button>
+                  <button
+                    className="nextbtn"
+                    onClick={() =>
+                      setCurrentQuestionIndex((prev) =>
+                        Math.min(filteredQuestions.length - 1, prev + 1)
+                      )
+                    }
+                    disabled={
+                      currentQuestionIndex >= filteredQuestions.length - 1 ||
+                      !filteredQuestions.length
+                    }
+                  >
+                    Save & Next
+                  </button>
+                </div>
               </div>
             )}
           </div>
+
           <div className="exam-right">
             <div className="student">
               <div className="student-info">
@@ -392,15 +454,15 @@ export const ExamInterface = () => {
                   <button
                     key={q.id}
                     className={`question-btn 
-                        ${currentQuestionIndex === index ? "active" : ""} 
-                        ${attempted.includes(q.id) ? "attempted" : ""}
-                        ${markedForReview.includes(q.id) ? "marked" : ""}`}
+                      ${currentQuestionIndex === index ? "active" : ""} 
+                      ${attempted.includes(q.id) ? "attempted" : ""}
+                      ${markedForReview.includes(q.id) ? "marked" : ""}`}
                     onClick={() => setCurrentQuestionIndex(index)}
                   >
                     {index + 1}
                   </button>
                 ))}
-                 <button
+                <button
                   className="submitbtn"
                   onClick={handleSubmit}
                   disabled={submitted}
