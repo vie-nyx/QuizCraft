@@ -1,73 +1,75 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./login.css";
-
 export const LoginPage = () => {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = async (e) => {
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
     try {
-      const response = await fetch("http://localhost:3002/login", {
+      const response = await fetch("/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
-      console.log("Login Response:", data); // Debugging response
-
-      if (response.ok && data.student) {
-        console.log("✅ Storing Student Data:", data.student);
-        sessionStorage.setItem("student", JSON.stringify(data.student));
-
-        // Ensure session storage is updated before navigating
-        setTimeout(() => {
-          navigate("/instructions");
-        }, 100); // Small delay to ensure storage is updated
-      } else {
-        setError(data.message || "Login failed.");
+      if (!response.ok) {
+        setError("Invalid credentials or server error.");
+        return;
       }
+
+      const data = await response.json();
+      sessionStorage.setItem("student", JSON.stringify(data.student));
+      setTimeout(() => {
+          navigate("/instructions");
+        }, 100);
     } catch (err) {
-      console.error("Server error:", err);
-      setError("Server error. Please try again.");
+      console.error(err);
+      setError("Something went wrong. Please try again.");
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-box">
-        <h2>Student Login</h2>
-        <form onSubmit={handleLogin}>
-          <div>
-            <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label>Roll Number (Password)</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit" className="login-btn">
-            LOGIN
-          </button>
-        </form>
-        {error && <p className="error-message">{error}</p>}
-      </div>
+    <div className="max-w-md mx-auto mt-20 p-6 border rounded shadow-md">
+      <h2 className="text-xl font-bold mb-4">Student Login</h2>
+      {error && <p className="text-red-500 mb-2">{error}</p>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label>Email</label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+          />
+        </div>
+        <div>
+          <label>Password</label>
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+          />
+        </div>
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+        >
+          Login
+        </button>
+      </form>
     </div>
   );
 };
+

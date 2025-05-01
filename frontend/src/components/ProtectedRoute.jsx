@@ -1,6 +1,12 @@
+// components/ProtectedRoute.js
 import { Navigate } from "react-router-dom";
 
 export const ProtectedRoute = ({ children }) => {
-  const student = JSON.parse(localStorage.getItem("student"));
-  return student ? children : <Navigate to="/" />;
+  const student = sessionStorage.getItem("student");
+
+  if (!student) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
 };

@@ -6,12 +6,17 @@ const xlsx = require("xlsx");
 const fs = require("fs");
 const cors = require("cors");
 const http = require("http");
-const socketIo = require("socket.io");
+const { Server } = require('socket.io'); 
 const rateLimit = require("express-rate-limit");
-
+const loginRoute = require("./routes/user");
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = new Server(server, {
+  cors: {
+      origin: "*",  // <-- allow all origins; change to specific origin for better security
+      methods: ["GET", "POST"]
+  }
+});
 
 const PORT = process.env.PORT || 3002;
 const UPLOADS_DIR = "uploads";
@@ -25,7 +30,7 @@ const STUDENT_IMAGES_DIR = path.join(__dirname, "uploads", "students");
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://yourfrontend.com";
 // Middleware
 app.use(express.json());
-app.use(cors({ origin: ["http://localhost:3000", "http://yourfrontend.com"] })); // Update for production
+app.use(cors({ origin: "*"})); // Update for production
 app.use(express.static(path.join(__dirname, "frontend", "dist")));
 
 // Ensure upload directory exists
@@ -83,17 +88,7 @@ const loginLimiter = rateLimit({
   message: "Too many login attempts. Please try again later.",
 });
 
-app.post("/login", loginLimiter, (req, res) => {
-  const { email, password } = req.body;
-  const students = readJSONFile(STUDENTS_FILE);
-
-  const student = students.find(
-    (s) => s.Email === email && String(s["Roll Number"]) === password
-  );
-
-  if (student) return res.json({ success: true, student });
-  res.status(401).json({ success: false, message: "Invalid credentials" });
-});
+app.use('/login', loginLimiter, loginRoute);
 
 // Route for downloading Question Template
 // Enhance template download routes with error checking
@@ -296,4 +291,4 @@ app.get("*", (req, res) => {
 /* ===========================
       Start Server
 =========================== */
-server.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+server.listen(PORT,'0.0.0.0', () => console.log(`Server running at http://localhost:${PORT}`));
