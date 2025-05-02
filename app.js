@@ -229,7 +229,14 @@ app.post("/upload-students", upload.single("file"), (req, res) => {
   try {
     const workbook = xlsx.readFile(req.file.path);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    writeJSONFile(STUDENTS_FILE, xlsx.utils.sheet_to_json(sheet));
+    
+    // Convert sheet data to JSON and add loginAttempts field
+    const students = xlsx.utils.sheet_to_json(sheet).map(student => ({
+      ...student,
+      loginAttempts: 0  // Add loginAttempts field with initial value 0
+    }));
+
+    writeJSONFile(STUDENTS_FILE, students);
 
     io.emit("students-updated", { message: "Student list updated!" });
     fs.unlink(req.file.path, () => {});

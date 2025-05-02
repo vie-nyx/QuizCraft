@@ -3,18 +3,30 @@
     "Name": "John Doe",
     "Roll Number": 121,
     "Email": "john.doe@example.com",
-    "Image": "dummy_image2.jpg"
+    "loginAttempts": 1
   },
   {
     "Name": "Jane Smith",
     "Roll Number": 122,
     "Email": "jane.smith@example.com",
-    "Image": "dummy_image2.jpg"
+    "loginAttempts": 0
   },
   {
-    "Name": "Peter Jones",
+    "Name": "Anne Marie",
     "Roll Number": 123,
-    "Email": "peter.jones@example.com",
-    "Image": "dummy_image2.jpg"
+    "Email": "anne.marie@example.com",
+    "loginAttempts": 0
+  },
+  {
+    "Name": "Emily Snow",
+    "Roll Number": 124,
+    "Email": "emily.snow@example.com",
+    "loginAttempts": 0
+  },
+  {
+    "Name": "John Snow",
+    "Roll Number": 125,
+    "Email": "john.snow@example.com",
+    "loginAttempts": 0
   }
 ]

@@ -22,8 +22,10 @@ export const LoginPage = () => {
       });
 
       if (!response.ok) {
-        setError("Invalid credentials or server error.");
-        return;
+        const errorData = await response.json();
+  setError(errorData.message || "Login failed");
+  return;
+
       }
 
       const data = await response.json();
