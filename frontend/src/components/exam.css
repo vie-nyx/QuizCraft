@@ -420,4 +420,14 @@ button:hover:not(:disabled) {
   background: #ffeb3b !important;
   color: #333 !important;
 }
+.question-image-container img {
+  display: block;
+  margin: auto;
+}
+
+.question-image-container p {
+  color: #999;
+  text-align: center;
+  font-style: italic;
+}
 

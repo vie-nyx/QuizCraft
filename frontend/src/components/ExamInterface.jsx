@@ -21,67 +21,54 @@ export const ExamInterface = () => {
   const [showResult, setShowResult] = useState(false);
   const [scoreData, setScoreData] = useState(null);
   const [markedForReview, setMarkedForReview] = useState([]);
-  // const [imagesExist, setImagesExist] = useState({});
+  const [imageStatus, setImageStatus] = useState({});
 
   const navigate = useNavigate();
   const timerRef = useRef(null);
   const suspiciousActivityRef = useRef(false);
 
-  // Filter questions based on selected subject
-  const filteredQuestions = questions?.filter?.(
-    (q) => q?.subject?.toLowerCase() === selectedSubject?.toLowerCase()
-  ) || [];
+// Check if image exists for a question
+const checkImageExists = async (questionId) => {
+  try {
+    // First check for PNG
+    const img = new Image();
+    img.src = `/images/${questionId}.png`;
+    
+    await new Promise((resolve, reject) => {
+      img.onload = () => {
+        setImageStatus(prev => ({ ...prev, [questionId]: 'png' }));
+        resolve();
+      };
+      img.onerror = () => {
+        // If PNG fails, check for JPG
+        const imgJpg = new Image();
+        imgJpg.src = `/images/${questionId}.jpg`;
+        imgJpg.onload = () => {
+          setImageStatus(prev => ({ ...prev, [questionId]: 'jpg' }));
+          resolve();
+        };
+        imgJpg.onerror = () => {
+          setImageStatus(prev => ({ ...prev, [questionId]: false }));
+          resolve();
+        };
+      };
+    });
+  } catch (error) {
+    setImageStatus(prev => ({ ...prev, [questionId]: false }));
+  }
+};
 
-  // Function to check if image exists
-  const checkImageExists = async (id) => {
-    try {
-      // Check for PNG first
-      const pngResponse = await fetch(`/images/${id}.png`, { method: 'HEAD' });
-      if (pngResponse.ok) return true;
-      
-      // If PNG doesn't exist, check for JPG
-      const jpgResponse = await fetch(`/images/${id}.jpg`, { method: 'HEAD' });
-      return jpgResponse.ok;
-    } catch (error) {
-      return false;
-    }
-  };
-
-  // Effect to check image existence when questions change
-  useEffect(() => {
-    const checkAllImages = async () => {
-      const existenceMap = {};
-      for (const question of questions) {
-        existenceMap[question.id] = await checkImageExists(question.id);
+ // Initialize image status when questions are loaded
+ useEffect(() => {
+  if (questions.length > 0) {
+    questions.forEach(question => {
+      // Only check if we haven't already checked this question
+      if (imageStatus[question.id] === undefined) {
+        checkImageExists(question.id);
       }
-      setImagesExist(existenceMap);
-    };
-
-    if (questions.length > 0) {
-      checkAllImages();
-    }
-  }, [questions]);
-
-  // Image rendering function
-  const renderQuestionImage = () => {
-    const questionId = filteredQuestions[currentQuestionIndex]?.id;
-    // if (!questionId || !imagesExist[questionId]) return null;
-
-    return (
-      <div className="question-image-container">
-        <img
-          src={`/images/${questionId}.png`}
-          
-          className="question-image"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = `/images/${questionId}.jpg`;
-          }}
-          
-        />
-      </div>
-    );
-  };
+    });
+  }
+}, [questions]);
 
   // Fullscreen handling
   const enterFullScreen = () => {
@@ -222,6 +209,12 @@ export const ExamInterface = () => {
     suspiciousActivityRef.current = suspiciousActivity;
   }, [suspiciousActivity]);
 
+  // Question handling
+  const filteredQuestions =
+    questions?.filter?.(
+      (q) => q?.subject?.toLowerCase() === selectedSubject?.toLowerCase()
+    ) || [];
+
   const handleOptionChange = (option) => {
     if (!filteredQuestions[currentQuestionIndex]?.id) return;
 
@@ -251,6 +244,7 @@ export const ExamInterface = () => {
     );
   };
 
+  // Exam submission
   const handleSubmit = useCallback(async () => {
     if (submitted || !student) return;
 
@@ -335,6 +329,9 @@ export const ExamInterface = () => {
 
   if (!filteredQuestions.length) return <h2>Loading questions...</h2>;
 
+  const currentQuestion = filteredQuestions[currentQuestionIndex];
+  const imageExtension = imageStatus[currentQuestion?.id];
+
   return (
     <div className="exam-container">
       {showResult ? (
@@ -361,31 +358,41 @@ export const ExamInterface = () => {
               </div>
             </div>
 
-            {filteredQuestions[currentQuestionIndex] && (
+            {currentQuestion && (
               <div className="question-box">
                 <h2>
                   Question {currentQuestionIndex + 1} of{" "}
                   {filteredQuestions.length}
                   <span>
-                    ({filteredQuestions[currentQuestionIndex].marks || 1} marks)
+                    ({currentQuestion.marks || 1} marks)
                   </span>
                 </h2>
 
                 <div className="question-content">
-                  <p>{filteredQuestions[currentQuestionIndex].question}</p>
-                  
-                  { checkImageExists(currentQuestionIndex) && renderQuestionImage()}
+                  <p>{currentQuestion.question}</p>
 
-                  {filteredQuestions[currentQuestionIndex].options?.map(
+                  {imageExtension && (
+                    <div className="question-image-container">
+                      <img
+                        src={`/images/${currentQuestion.id}.${imageExtension}`}
+                        className="question-image"
+                        alt="Question illustration"
+                        onError={(e) => {
+                          // Hide the image if it fails to load
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {currentQuestion.options?.map(
                     (option, index) => (
                       <label key={index} className="option-label">
                         <input
                           type="radio"
-                          name={`question-${filteredQuestions[currentQuestionIndex].id}`}
+                          name={`question-${currentQuestion.id}`}
                           checked={
-                            selectedOption[
-                              filteredQuestions[currentQuestionIndex].id
-                            ] === option
+                            selectedOption[currentQuestion.id] === option
                           }
                           onChange={() => handleOptionChange(option)}
                         />
