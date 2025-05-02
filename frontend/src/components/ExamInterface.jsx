@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Result from "./Result";
 import "./exam.css";
-import { BASE_URL } from '../config.js';
-
+import { BASE_URL } from "../config";
 export const ExamInterface = () => {
   // State declarations
   const [student, setStudent] = useState(null);
@@ -19,14 +18,91 @@ export const ExamInterface = () => {
   const [timer, setTimer] = useState(0);
   const [suspiciousActivity, setSuspiciousActivity] = useState(false);
   const [exitCount, setExitCount] = useState(0);
+  const navigate = useNavigate();
   const [showResult, setShowResult] = useState(false);
   const [scoreData, setScoreData] = useState(null);
   const [markedForReview, setMarkedForReview] = useState([]);
   const [imageStatus, setImageStatus] = useState({});
 
-  const navigate = useNavigate();
+  
   const timerRef = useRef(null);
   const suspiciousActivityRef = useRef(false);
+
+
+  // Function to enter full-screen mode
+  const enterFullScreen = () => {
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement
+        .requestFullscreen()
+        .catch((err) => console.error("Error entering fullscreen:", err));
+    }
+  };
+  const progressKey = student ? `examProgress_${student["Roll Number"]}` : null;
+
+
+  // Load saved progress on mount
+  useEffect(() => {
+    const storedStudent = sessionStorage.getItem("student");
+    if (storedStudent) {
+      const studentData = JSON.parse(storedStudent);
+      setStudent(studentData);
+      
+      // Load progress from storage
+      const savedProgress = sessionStorage.getItem(`examProgress_${studentData["Roll Number"]}`);
+      if (savedProgress) {
+        const { 
+          selectedOption, 
+          currentIndex, 
+          marked, 
+          attemptedQs, 
+          selectedSubj 
+        } = JSON.parse(savedProgress);
+        
+        setSelectedOption(selectedOption);
+        setCurrentQuestionIndex(currentIndex);
+        setMarkedForReview(marked);
+        setAttempted(attemptedQs);
+        setSelectedSubject(selectedSubj);
+      }
+    } else {
+      window.location.href = "/login";
+    }
+  }, []);
+
+  // Save progress whenever state changes
+  useEffect(() => {
+    if (student && !submitted) {
+      const progress = {
+        selectedOption,
+        currentIndex: currentQuestionIndex,
+        marked: markedForReview,
+        attemptedQs: attempted,
+        selectedSubj: selectedSubject
+      };
+      localStorage.setItem(
+        `examProgress_${student["Roll Number"]}`,
+        JSON.stringify(progress)
+      );
+    }
+  }, [selectedOption, currentQuestionIndex, markedForReview, attempted, selectedSubject, student, submitted]);
+  useEffect(() => {
+    const handlePopState = (e) => {
+      // Prevent back navigation
+      window.history.pushState(null, null, window.location.pathname);
+    };
+  
+    // Push initial state
+    window.history.pushState(null, null, window.location.pathname);
+    window.addEventListener("popstate", handlePopState);
+  
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+  useEffect(() => {
+    enterFullScreen(); // Enter full-screen on mount
+  }, []);
+
 
 // Check if image exists for a question
 const checkImageExists = async (questionId) => {
@@ -71,14 +147,7 @@ const checkImageExists = async (questionId) => {
   }
 }, [questions]);
 
-  // Fullscreen handling
-  const enterFullScreen = () => {
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement
-        .requestFullscreen()
-        .catch((err) => console.error("Error entering fullscreen:", err));
-    }
-  };
+
 
   const handleFullscreenChange = () => {
     if (!document.fullscreenElement && !submitted) {
@@ -144,20 +213,7 @@ const checkImageExists = async (questionId) => {
     };
     fetchQuestions();
   }, []);
-  useEffect(() => {
-    const handlePopState = (e) => {
-      // Prevent back navigation
-      window.history.pushState(null, null, window.location.pathname);
-    };
-  
-    // Push initial state
-    window.history.pushState(null, null, window.location.pathname);
-    window.addEventListener("popstate", handlePopState);
-  
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, []);
+
   // Timer and exam control
   useEffect(() => {
     if (!student || !testSchedule) return;
@@ -263,7 +319,6 @@ const checkImageExists = async (questionId) => {
     if (submitted || !student) return;
 
     setSubmitted(true);
-   
     sessionStorage.setItem(`examSubmitted_${student["Roll Number"]}`, "true");
     clearInterval(timerRef.current);
     sessionStorage.removeItem(`examProgress_${student["Roll Number"]}`);
@@ -315,7 +370,7 @@ const checkImageExists = async (questionId) => {
 
     // Submit to backend
     try {
-      await fetch(`${URL}/submit`, {
+      await fetch(`${BASE_URL}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
 
@@ -356,7 +411,7 @@ const checkImageExists = async (questionId) => {
           selectedSubj: selectedSubject
         };
         sessionStorage.setItem(
-          `examProgress_${student["Roll Number"]}`,
+          `examProgress_${student["Roll Number"]}`,  // Added backticks (`) here
           JSON.stringify(progress)
         );
       }
@@ -371,7 +426,7 @@ const checkImageExists = async (questionId) => {
   useEffect(() => {
     const autoSave = setInterval(() => {
       if (!submitted && student) {
-        fetch(`${BASE_URL}/save-progress`, {
+        fetch('http://your-api/save-progress', {
           method: 'POST',
           body: JSON.stringify({
             studentId: student["Roll Number"],
@@ -395,7 +450,8 @@ const checkImageExists = async (questionId) => {
     channel.onmessage = (e) => {
       if (e.data === 'duplicate_tab') {
         alert('Only one exam session allowed!');
-        window.location.href = 'about:blank';
+        document.body.innerHTML = '<h1>Duplicate exam session detected. This tab is blocked.</h1>';
+
   
       }
     };

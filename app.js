@@ -17,6 +17,7 @@ const io = new Server(server, {
       methods: ["GET", "POST"]
   }
 });
+const progressRoutes = require("./routes/progressRoutes");
 
 const PORT = process.env.PORT || 3002;
 const UPLOADS_DIR = "uploads";
@@ -89,7 +90,7 @@ const loginLimiter = rateLimit({
 });
 
 app.use('/login', loginLimiter, loginRoute);
-
+app.use("/progress", progressRoutes);
 // Route for downloading Question Template
 // Enhance template download routes with error checking
 app.get("/download/question-template.xlsx", (req, res) => {
