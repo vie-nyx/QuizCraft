@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import "./instructions.css";
-
+import { BASE_URL } from "../config.js";
 export const InstructionsPage = () => {
   const navigate = useNavigate();
   const [student, setStudent] = useState(null);
@@ -37,7 +37,7 @@ export const InstructionsPage = () => {
 
     // Fetch test schedule
     const fetchSchedule = () => {
-      fetch("http://10.10.231.249:3002/get-schedule")
+      fetch(`${BASE_URL}/get-schedule`)
         .then((res) => {
           if (!res.ok) throw new Error("Failed to fetch schedule");
           return res.json();
@@ -53,7 +53,7 @@ export const InstructionsPage = () => {
     fetchSchedule();
 
     // Listen for schedule updates via WebSocket
-    const socket = io("http://10.10.231.249:3002");
+    const socket = io(`BASE_URL`);
     socket.on("schedule-updated", fetchSchedule);
 
     return () => socket.disconnect();

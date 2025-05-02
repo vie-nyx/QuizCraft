@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./login.css";
+import { BASE_URL } from "../config.js";
 export const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,6 +23,7 @@ export const LoginPage = () => {
       });
 
       if (!response.ok) {
+        console.log(URL);
         const errorData = await response.json();
   setError(errorData.message || "Login failed");
   return;

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Result from "./Result";
 import "./exam.css";
+import { BASE_URL } from '../config.js';
 
 export const ExamInterface = () => {
   // State declarations
@@ -112,7 +113,7 @@ const checkImageExists = async (questionId) => {
   useEffect(() => {
     const fetchSchedule = async () => {
       try {
-        const response = await fetch("http://localhost:3002/get-schedule");
+        const response = await fetch(`${BASE_URL}/get-schedule`);
         if (!response.ok) throw new Error("Failed to fetch schedule");
         const data = await response.json();
         setTestSchedule(data);
@@ -126,7 +127,7 @@ const checkImageExists = async (questionId) => {
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const response = await fetch("http://localhost:3002/api/questions");
+        const response = await fetch(`${BASE_URL}/api/questions`);
         if (!response.ok) throw new Error("Failed to fetch questions");
         const data = await response.json();
         if (data.length > 0) {
@@ -143,7 +144,20 @@ const checkImageExists = async (questionId) => {
     };
     fetchQuestions();
   }, []);
-
+  useEffect(() => {
+    const handlePopState = (e) => {
+      // Prevent back navigation
+      window.history.pushState(null, null, window.location.pathname);
+    };
+  
+    // Push initial state
+    window.history.pushState(null, null, window.location.pathname);
+    window.addEventListener("popstate", handlePopState);
+  
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
   // Timer and exam control
   useEffect(() => {
     if (!student || !testSchedule) return;
@@ -301,7 +315,7 @@ const checkImageExists = async (questionId) => {
 
     // Submit to backend
     try {
-      await fetch("http://10.10.231.249:3002/submit", {
+      await fetch(`${URL}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
 
@@ -357,7 +371,7 @@ const checkImageExists = async (questionId) => {
   useEffect(() => {
     const autoSave = setInterval(() => {
       if (!submitted && student) {
-        fetch('http://your-api/save-progress', {
+        fetch(`${BASE_URL}/save-progress`, {
           method: 'POST',
           body: JSON.stringify({
             studentId: student["Roll Number"],

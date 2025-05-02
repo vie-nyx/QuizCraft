@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import "./upload.css";
 import ImageUploader from "./ImageUpload";
+import { BASE_URL } from "../config";
 
-const socket = io("http://10.10.231.249:3002");
+const socket = io(`${BASE_URL}`);
 
 
 export const UploadExcel = () => {
@@ -58,7 +59,7 @@ export const UploadExcel = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`http://10.10.231.249:3002/${endpoint}`, {
+      const response = await fetch(`${BASE_URL}/${endpoint}`, {
         method: "POST",
         body: formData,
       });
@@ -94,7 +95,7 @@ export const UploadExcel = () => {
     }
 
     try {
-      const response = await fetch("http://10.10.231.249:3002/set-schedule", {
+      const response = await fetch(`${BASE_URL}/set-schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ testDate, startTime, endTime }),
@@ -145,7 +146,7 @@ export const UploadExcel = () => {
   const handleDownload = async (filename) => {
     try {
       const response = await fetch(
-        `http://10.10.231.249:3002/download/${filename}`
+        `${BASE_URL}/download/${filename}`
       );
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
