@@ -249,9 +249,11 @@ const checkImageExists = async (questionId) => {
     if (submitted || !student) return;
 
     setSubmitted(true);
+   
     sessionStorage.setItem(`examSubmitted_${student["Roll Number"]}`, "true");
     clearInterval(timerRef.current);
-
+    sessionStorage.removeItem(`examProgress_${student["Roll Number"]}`);
+    sessionStorage.setItem(`examSubmitted_${student["Roll Number"]}`, "true");
     let totalScore = 0;
     const correctAnswers = {};
     const sectionDetails = {};
@@ -265,7 +267,7 @@ const checkImageExists = async (questionId) => {
         totalScore += marks;
         correctAnswers[key] = true;
       }
-
+      // Section breakdown
       if (!sectionDetails[question.subject]) {
         sectionDetails[question.subject] = {
           attempted: 0,
@@ -279,27 +281,30 @@ const checkImageExists = async (questionId) => {
         if (isCorrect) sectionDetails[question.subject].correct++;
       }
     });
-
     setScore(totalScore);
-    const totalPossible = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
 
+    // Prepare result data
+    const totalPossible = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+    const sections = Object.entries(sectionDetails).map(([name, data]) => ({
+      name,
+      ...data,
+    }));
     setScoreData({
       examName: "Final Examination",
       totalScore: Math.round((totalScore / totalPossible) * 100),
       correctAnswers: Object.keys(correctAnswers).length,
       totalQuestions: questions.length,
-      sections: Object.entries(sectionDetails).map(([name, data]) => ({
-        name,
-        ...data,
-      })),
-      percentile: 75,
+      sections,
+      percentile: 75, // Should come from server
     });
     setShowResult(true);
 
+    // Submit to backend
     try {
-      await fetch("http://localhost:3002/submit", {
+      await fetch("http://10.10.231.249:3002/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+
         body: JSON.stringify({
           studentName: student.Name,
           rollNumber: student["Roll Number"],
@@ -326,7 +331,62 @@ const checkImageExists = async (questionId) => {
       .toString()
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!submitted && student) {
+        const progress = {
+          selectedOption,
+          currentIndex: currentQuestionIndex,
+          marked: markedForReview,
+          attemptedQs: attempted,
+          selectedSubj: selectedSubject
+        };
+        sessionStorage.setItem(
+          `examProgress_${student["Roll Number"]}`,
+          JSON.stringify(progress)
+        );
+      }
+    };
+  
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [selectedOption, currentQuestionIndex, markedForReview, attempted, selectedSubject, student, submitted]);
+   
+  // Auto-save every 30 seconds
 
+  useEffect(() => {
+    const autoSave = setInterval(() => {
+      if (!submitted && student) {
+        fetch('http://your-api/save-progress', {
+          method: 'POST',
+          body: JSON.stringify({
+            studentId: student["Roll Number"],
+            progress: {
+              selectedOption,
+              currentQuestionIndex,
+              markedForReview,
+              attempted,
+              selectedSubject
+            }
+          })
+        });
+      }
+    }, 30000);
+  
+    return () => clearInterval(autoSave);
+  }, [submitted, student, selectedOption, currentQuestionIndex, markedForReview, attempted, selectedSubject]);
+  // Detect multiple tabs
+  useEffect(() => {
+    const channel = new BroadcastChannel('exam_tab');
+    channel.onmessage = (e) => {
+      if (e.data === 'duplicate_tab') {
+        alert('Only one exam session allowed!');
+        window.location.href = 'about:blank';
+  
+      }
+    };
+    channel.postMessage('duplicate_tab');
+  }, []);
   if (!filteredQuestions.length) return <h2>Loading questions...</h2>;
 
   const currentQuestion = filteredQuestions[currentQuestionIndex];

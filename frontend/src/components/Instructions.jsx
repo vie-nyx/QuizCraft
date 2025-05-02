@@ -12,6 +12,21 @@ export const InstructionsPage = () => {
   const [testSchedule, setTestSchedule] = useState(null);
 
   useEffect(() => {
+    const handlePopState = (e) => {
+      // Prevent back navigation
+      window.history.pushState(null, null, window.location.pathname);
+    };
+  
+    // Push initial state
+    window.history.pushState(null, null, window.location.pathname);
+    window.addEventListener("popstate", handlePopState);
+  
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  useEffect(() => {
     // Fetch student data
     const storedStudent = sessionStorage.getItem("student");
     if (!storedStudent) {
@@ -22,7 +37,7 @@ export const InstructionsPage = () => {
 
     // Fetch test schedule
     const fetchSchedule = () => {
-      fetch("http://localhost:3002/get-schedule")
+      fetch("http://10.10.231.249:3002/get-schedule")
         .then((res) => {
           if (!res.ok) throw new Error("Failed to fetch schedule");
           return res.json();
@@ -38,7 +53,7 @@ export const InstructionsPage = () => {
     fetchSchedule();
 
     // Listen for schedule updates via WebSocket
-    const socket = io("http://localhost:3002");
+    const socket = io("http://10.10.231.249:3002");
     socket.on("schedule-updated", fetchSchedule);
 
     return () => socket.disconnect();
