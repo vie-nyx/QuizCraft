@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Result from "./Result";
 import "./exam.css";
-import { BASE_URL } from "../config";
+
 export const ExamInterface = () => {
   // State declarations
   const [student, setStudent] = useState(null);
@@ -69,22 +69,24 @@ export const ExamInterface = () => {
     }
   }, []);
 
-  // Save progress whenever state changes
-  useEffect(() => {
-    if (student && !submitted) {
-      const progress = {
-        selectedOption,
-        currentIndex: currentQuestionIndex,
-        marked: markedForReview,
-        attemptedQs: attempted,
-        selectedSubj: selectedSubject
-      };
-      localStorage.setItem(
-        `examProgress_${student["Roll Number"]}`,
-        JSON.stringify(progress)
-      );
-    }
-  }, [selectedOption, currentQuestionIndex, markedForReview, attempted, selectedSubject, student, submitted]);
+// When saving progress
+useEffect(() => {
+  if (student && !submitted) {
+    const progress = {
+      selectedOption,
+      currentIndex: currentQuestionIndex,
+      marked: markedForReview,
+      attemptedQs: attempted,
+      selectedSubj: selectedSubject,
+      // Add question IDs in their current order
+      questionOrder: questions.map(q => q.id)
+    };
+    localStorage.setItem(
+      `examProgress_${student["Roll Number"]}`,
+      JSON.stringify(progress)
+    );
+  }
+}, [selectedOption, currentQuestionIndex, markedForReview, attempted, selectedSubject, student, submitted, questions]);
   useEffect(() => {
     const handlePopState = (e) => {
       // Prevent back navigation
@@ -168,21 +170,49 @@ const checkImageExists = async (questionId) => {
     }
   };
 
-  // Data fetching effects
-  useEffect(() => {
-    const storedStudent = sessionStorage.getItem("student");
-    if (storedStudent) {
-      setStudent(JSON.parse(storedStudent));
-    } else {
-      alert("Student details missing! Redirecting to login.");
-      window.location.href = "/login";
+ // When loading progress
+useEffect(() => {
+  const storedStudent = sessionStorage.getItem("student");
+  if (storedStudent) {
+    const studentData = JSON.parse(storedStudent);
+    setStudent(studentData);
+    
+    // Load progress from storage
+    const savedProgress = sessionStorage.getItem(`examProgress_${studentData["Roll Number"]}`);
+    if (savedProgress) {
+      const { 
+        selectedOption, 
+        currentIndex, 
+        marked, 
+        attemptedQs, 
+        selectedSubj,
+        questionOrder 
+      } = JSON.parse(savedProgress);
+      
+      // If we have a saved question order, restore it
+      if (questionOrder) {
+        setQuestions(prevQuestions => {
+          // Create a map for quick lookup
+          const questionMap = new Map(prevQuestions.map(q => [q.id, q]));
+          // Reconstruct the array in the saved order
+          return questionOrder.map(id => questionMap.get(id)).filter(q => q);
+        });
+      }
+      
+      setSelectedOption(selectedOption);
+      setCurrentQuestionIndex(currentIndex);
+      setMarkedForReview(marked);
+      setAttempted(attemptedQs);
+      setSelectedSubject(selectedSubj);
     }
-  }, []);
-
+  } else {
+    window.location.href = "/login";
+  }
+}, []);
   useEffect(() => {
     const fetchSchedule = async () => {
       try {
-        const response = await fetch(`${BASE_URL}/get-schedule`);
+        const response = await fetch("http://localhost:3002/get-schedule");
         if (!response.ok) throw new Error("Failed to fetch schedule");
         const data = await response.json();
         setTestSchedule(data);
@@ -192,27 +222,36 @@ const checkImageExists = async (questionId) => {
     };
     fetchSchedule();
   }, []);
-
-  useEffect(() => {
-    const fetchQuestions = async () => {
-      try {
-        const response = await fetch(`${BASE_URL}/api/questions`);
-        if (!response.ok) throw new Error("Failed to fetch questions");
-        const data = await response.json();
-        if (data.length > 0) {
-          setQuestions(data);
-          const uniqueSubjects = [...new Set(data.map((q) => q.subject))];
-          setSubjects(uniqueSubjects);
-          setSelectedSubject(uniqueSubjects[0]);
-        } else {
-          console.error("No questions received!");
-        }
-      } catch (error) {
-        console.error("Error fetching questions:", error);
+// Fisher-Yates shuffle algorithm
+const shuffleArray = (array) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+useEffect(() => {
+  const fetchQuestions = async () => {
+    try {
+      const response = await fetch("http://localhost:3002/api/questions");
+      if (!response.ok) throw new Error("Failed to fetch questions");
+      const data = await response.json();
+      if (data.length > 0) {
+        const shuffledQuestions = shuffleArray(data);
+        setQuestions(shuffledQuestions);
+        const uniqueSubjects = [...new Set(shuffledQuestions.map((q) => q.subject))];
+        setSubjects(uniqueSubjects);
+        setSelectedSubject(uniqueSubjects[0]);
+      } else {
+        console.error("No questions received!");
       }
-    };
-    fetchQuestions();
-  }, []);
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+    }
+  };
+  fetchQuestions();
+}, []);
 
   // Timer and exam control
   useEffect(() => {
@@ -280,10 +319,9 @@ const checkImageExists = async (questionId) => {
   }, [suspiciousActivity]);
 
   // Question handling
-  const filteredQuestions =
-    questions?.filter?.(
-      (q) => q?.subject?.toLowerCase() === selectedSubject?.toLowerCase()
-    ) || [];
+  const filteredQuestions = questions
+  ? questions.filter(q => q?.subject?.toLowerCase() === selectedSubject?.toLowerCase())
+  : [];
 
   const handleOptionChange = (option) => {
     if (!filteredQuestions[currentQuestionIndex]?.id) return;
@@ -370,7 +408,7 @@ const checkImageExists = async (questionId) => {
 
     // Submit to backend
     try {
-      await fetch(`${BASE_URL}/submit`, {
+      await fetch("http://10.10.231.249:3002/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
 

@@ -1,34 +1,180 @@
+/* Base styles */
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f3f4f6;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f5f7fa;
   margin: 0;
   padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  color: #333;
 }
 
-input[type="email"],
-input[type="password"] {
-  outline: none;
-  border: 1px solid #d1d5db;
-  transition: border 0.2s;
+/* Login container */
+.max-w-md {
+  max-width: 28rem;
+  width: 100%;
 }
 
-input[type="email"]:focus,
-input[type="password"]:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 1px #3b82f6;
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mt-20 {
+  margin-top: 5rem;
+}
+
+.p-6 {
+  padding: 1.5rem;
+}
+
+.border {
+  border: 1px solid #e2e8f0;
+}
+
+.rounded {
+  border-radius: 0.5rem;
+}
+
+.shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Background color for the form */
+.bg-white {
+  background-color: white;
+}
+
+/* Heading styles */
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Error message */
+.text-red-500 {
+  color: #ef4444;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+/* Form styles */
+.space-y-4 > * + * {
+  margin-top: 1rem;
 }
 
 label {
   display: block;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #4a5568;
 }
 
+.w-full {
+  width: 100%;
+}
+
+.px-3 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+/* Input fields */
+input[type="email"],
+input[type="password"] {
+  transition: all 0.3s ease;
+  border: 1px solid #cbd5e0;
+}
+
+input[type="email"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+}
+
+/* Button styles */
 button {
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  font-weight: 600;
 }
 
-button:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
+.bg-blue-600 {
+  background-color: #2563eb;
+}
+
+.text-white {
+  color: white;
+}
+
+.hover\:bg-blue-700:hover {
+  background-color: #1d4ed8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .mt-20 {
+    margin-top: 2rem;
+  }
+  
+  .p-6 {
+    padding: 1rem;
+  }
+}
+
+/* Animation for the form */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.max-w-md {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Additional visual enhancements */
+.border {
+  border-color: #e2e8f0;
+}
+
+.rounded {
+  border-radius: 8px;
+}
+
+.shadow-md {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Focus states for accessibility */
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
 }
