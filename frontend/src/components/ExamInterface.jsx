@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Result from "./Result";
 import "./exam.css";
-
+import { BASE_URL } from '../config.js'
 export const ExamInterface = () => {
   // State declarations
   const [student, setStudent] = useState(null);
@@ -212,7 +212,7 @@ useEffect(() => {
   useEffect(() => {
     const fetchSchedule = async () => {
       try {
-        const response = await fetch("http://localhost:3002/get-schedule");
+        const response = await fetch(`${BASE_URL}/get-schedule`);
         if (!response.ok) throw new Error("Failed to fetch schedule");
         const data = await response.json();
         setTestSchedule(data);
@@ -234,7 +234,7 @@ const shuffleArray = (array) => {
 useEffect(() => {
   const fetchQuestions = async () => {
     try {
-      const response = await fetch("http://localhost:3002/api/questions");
+      const response = await fetch(`${BASE_URL}/api/questions`);
       if (!response.ok) throw new Error("Failed to fetch questions");
       const data = await response.json();
       if (data.length > 0) {
@@ -408,7 +408,7 @@ useEffect(() => {
 
     // Submit to backend
     try {
-      await fetch("http://10.10.231.249:3002/submit", {
+      await fetch(`${BASE_URL}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
 
@@ -611,16 +611,16 @@ useEffect(() => {
           </div>
 
           <div className="exam-right">
-            <div className="student">
+          <div className="student">
               <div className="student-info">
                 {student && (
-                  <h3>
-                    {student.Name} | Roll No: {student["Roll Number"]}
-                  </h3>
+                  <>
+                    <h3>{student.Name} | Roll No: {student["Roll Number"]}</h3>
+                    <div className="timer">Time Left: {formatTime(timer)}</div>
+                  </>
                 )}
               </div>
-              <div className="timer">Time Left: {formatTime(timer)}</div>
-            </div>
+            </div>
 
             <div className="question-progress">
               <h3>Question Navigator</h3>
