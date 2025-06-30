@@ -10,5 +10,11 @@
     "RollNumber": 122,
     "Score": 2,
     "isSuspicious": false
+  },
+  {
+    "Student": "Emily Snow",
+    "RollNumber": 124,
+    "Score": 1,
+    "isSuspicious": false
   }
 ]
